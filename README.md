@@ -88,15 +88,7 @@ cmake -DCUDA_ARCH=75 ..
 make
 ```
 
-## Code Organization
 
-- **src/edge_detection.py** - Main Python implementation with CPU and GPU edge detection
-- **src/sobel_kernel.cu** - CUDA kernels for GPU edge detection (basic + optimized versions)
-- **run.sh** - Shell script to run the pipeline
-- **CMakeLists.txt** - CMake build configuration
-- **misc/** - Input images from USC SIPI database (41 images)
-- **output/** - Edge-detected output images (auto-created)
-- **results/** - Performance metrics CSV (auto-created)
 
 ## Expected Outputs
 
