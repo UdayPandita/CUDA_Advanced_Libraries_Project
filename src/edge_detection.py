@@ -5,6 +5,8 @@ import cv2
 import numpy as np
 import pandas as pd
 import time
+import shutil
+import subprocess
 from pathlib import Path
 import warnings
 import sys
@@ -31,6 +33,12 @@ class EdgeDetector:
     
     def _compile_cuda_kernel(self):
         try:
+            if not self._ensure_msvc_in_path():
+                raise RuntimeError(
+                    "MSVC compiler (cl.exe) not found. Install Visual Studio Build Tools C++ workload "
+                    "or run from a Developer PowerShell prompt."
+                )
+
             kernel_path = Path(__file__).parent / "sobel_kernel.cu"
             
             if not kernel_path.exists():
@@ -39,7 +47,10 @@ class EdgeDetector:
                 with open(kernel_path, 'r') as f:
                     cuda_code = f.read()
             
-            module = SourceModule(cuda_code)
+            module = SourceModule(
+                cuda_code,
+                options=["-allow-unsupported-compiler"],
+            )
             
             self.kernel = module.get_function("sobel_edge_detection")
             print("✓ CUDA kernel compiled successfully")
@@ -47,6 +58,51 @@ class EdgeDetector:
         except Exception as e:
             print(f"✗ Failed to compile CUDA kernel: {e}")
             self.cuda_available = False
+
+    def _ensure_msvc_in_path(self):
+        if shutil.which("cl.exe"):
+            return True
+
+        vswhere = Path("C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe")
+        if not vswhere.exists():
+            return False
+
+        try:
+            install_root = subprocess.check_output(
+                [
+                    str(vswhere),
+                    "-latest",
+                    "-products",
+                    "*",
+                    "-requires",
+                    "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+                    "-property",
+                    "installationPath",
+                ],
+                text=True,
+            ).strip()
+        except Exception:
+            return False
+
+        if not install_root:
+            return False
+
+        msvc_root = Path(install_root) / "VC" / "Tools" / "MSVC"
+        if not msvc_root.exists():
+            return False
+
+        candidates = sorted([p for p in msvc_root.iterdir() if p.is_dir()], reverse=True)
+        for toolset in candidates:
+            for rel in [
+                Path("bin") / "Hostx64" / "x64",
+                Path("bin") / "Hostx86" / "x64",
+            ]:
+                compiler_dir = toolset / rel
+                if (compiler_dir / "cl.exe").exists():
+                    os.environ["PATH"] = str(compiler_dir) + os.pathsep + os.environ.get("PATH", "")
+                    return shutil.which("cl.exe") is not None
+
+        return False
     
     def _get_inline_kernel(self):
         return """
