@@ -84,9 +84,11 @@ EOF
 **Build with CMake:**
 ```bash
 mkdir build && cd build
-cmake -DCUDA_ARCH=75 ..
+cmake -G "Visual Studio 18 2026" -A x64 -T "cuda=C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.1" -DCUDA_ARCH=75 ..
 make
 ```
+
+If CMake reports `No CUDA toolset found`, make sure Visual Studio Build Tools (C++ workload) and CUDA Visual Studio integration are installed, then configure with the `-T "cuda=..."` option shown above.
 
 
 
@@ -95,6 +97,8 @@ make
 **Edge Images** (in `output/`):
 - `{image_name}_edges_cpu.png` - CPU-based edge detection
 - `{image_name}_edges_gpu.png` - GPU-based edge detection
+
+If CUDA compilation fails, the script continues in CPU-only mode and only writes `_edges_cpu.png`.
 
 **Performance Metrics** (in `results/execution_times.csv`):
 ```
